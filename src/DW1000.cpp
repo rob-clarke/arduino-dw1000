@@ -168,7 +168,7 @@ void DW1000Class::begin(uint8_t irq, uint8_t rst) {
     	pinMode(irq, INPUT);
 	// start SPI
 	SPI.begin();
-#ifndef ESP8266
+#if !defined(ESP8266) && !defined(_VARIANT_ARDUINO_STM32_)
 	SPI.usingInterrupt(digitalPinToInterrupt(irq)); // not every board support this, e.g. ESP8266
 #endif
 	// pin and basic member setup
