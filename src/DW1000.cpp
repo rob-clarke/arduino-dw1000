@@ -186,7 +186,12 @@ void DW1000Class::manageLDE() {
 	byte ldoTune[LEN_OTP_RDAT];
 	readBytesOTP(0x04, ldoTune); // TODO #define
 	if(ldoTune[0] != 0) {
-		// TODO tuning available, copy over to RAM: use OTP_LDO bit
+      // TODO tuning available, copy over to RAM: use OTP_LDO bit
+      #define OTP_IF 0x2D
+      #define   OTP_SF  0x12
+      #define OTP_SF_LDO_KICK 0x02 
+      uint8 ldok = OTP_SF_LDO_KICK;                   
+      writeBytes(OTP_IF, OTP_SF, &ldok, 1); // set load LDE kick bit
 	}
 	// tell the chip to load the LDE microcode
 	// TODO remove clock-related code (PMSC_CTRL) as handled separately
@@ -336,7 +341,7 @@ void DW1000Class::enableMode(const byte mode[]) {
 	setPreambleLength(mode[2]);
 	// TODO add channel and code to mode tuples
 	// TODO add channel and code settings with checks (see Table 58)
-	setChannel(CHANNEL_5);
+	setChannel(CHANNEL_5); // 6489.6 MHz
 	if(mode[1] == TX_PULSE_FREQ_16MHZ) {
 		setPreambleCode(PREAMBLE_CODE_16MHZ_4);
 	} else {

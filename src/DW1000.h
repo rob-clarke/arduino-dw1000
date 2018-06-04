@@ -28,6 +28,10 @@
 #ifndef _DW1000_H_INCLUDED
 #define _DW1000_H_INCLUDED
 
+#define pinSPI_CLK PA5
+#define pinSPI_MISO PA6
+#define pinSPI_MOSI PA7
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
