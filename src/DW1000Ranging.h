@@ -43,24 +43,24 @@
 #define LEN_DATA 90
 
 //Max devices we put in the networkDevices array ! Each DW1000Device is 74 Bytes in SRAM memory for now.
-#define MAX_DEVICES 4
+#define MAX_DEVICES 20
 
 //Default Pin for module:
-#define DEFAULT_RST_PIN 9
-#define DEFAULT_SPI_SS_PIN 10
+#define DEFAULT_RST_PIN PA0
+#define DEFAULT_SPI_SS_PIN PA4
 
 //Default value
 //in ms
-#define DEFAULT_RESET_PERIOD 200
+#define DEFAULT_RESET_PERIOD 1000 // was 2000
 //in us
-#define DEFAULT_REPLY_DELAY_TIME 7000
+#define DEFAULT_REPLY_DELAY_TIME 4000 // was 7000, 4000 is ok
 
 //sketch type (anchor or tag)
 #define TAG 0
 #define ANCHOR 1
 
 //default timer delay
-#define DEFAULT_TIMER_DELAY 80
+#define DEFAULT_TIMER_DELAY 40  // was 80 for Atmega328p
 
 //debug mode
 #ifndef DEBUG
@@ -141,6 +141,8 @@ private:
 	//sketch type (tag or anchor)
 	static int16_t          _type; //0 for tag and 1 for anchor
 	// TODO check type, maybe enum?
+	// have pollSend times been updated?
+	static boolean pollSendTimesUpdated;
 	// message flow state
 	static volatile byte    _expectedMsgId;
 	// message sent/received state
@@ -198,6 +200,8 @@ private:
 	static void transmitPoll(DW1000Device* myDistantDevice);
 	static void transmitRange(DW1000Device* myDistantDevice);
 	
+	static void updatePollSendTimes();
+
 	//methods for range computation
 	static void computeRangeAsymmetric(DW1000Device* myDistantDevice, DW1000Time* myTOF);
 	

@@ -45,6 +45,9 @@ DW1000Mac    DW1000RangingClass::_globalMac;
 //module type (anchor or tag)
 int16_t      DW1000RangingClass::_type; // TODO enum??
 
+// Have pollSend times been updated?
+boolean DW1000RangingClass::pollSendTimesUpdated = false;
+
 // message flow state
 volatile byte    DW1000RangingClass::_expectedMsgId;
 
@@ -173,9 +176,13 @@ void DW1000RangingClass::startAsAnchor(char address[], const byte mode[], const 
 		_currentShortAddress[1] = random(0, 256);
 	}
 	else {
-		// we use first two bytes in addess for short address
+		// Rather than 'random', XOR the EUI
 		_currentShortAddress[0] = _currentAddress[0];
-		_currentShortAddress[1] = _currentAddress[1];
+		_currentShortAddress[1] = _currentAddress[4];
+		for( int i = 1; i < 4; i++ ) {
+			_currentShortAddress[0] ^= _currentAddress[i];
+			_currentShortAddress[1] ^= _currentAddress[i+4];
+		}
 	}
 	
 	//we configur the network for mac filtering
@@ -206,9 +213,13 @@ void DW1000RangingClass::startAsTag(char address[], const byte mode[], const boo
 		_currentShortAddress[1] = random(0, 256);
 	}
 	else {
-		// we use first two bytes in addess for short address
+		// Rather than 'random', XOR the EUI
 		_currentShortAddress[0] = _currentAddress[0];
-		_currentShortAddress[1] = _currentAddress[1];
+		_currentShortAddress[1] = _currentAddress[4];
+		for( int i = 1; i < 4; i++ ) {
+			_currentShortAddress[0] ^= _currentAddress[i];
+			_currentShortAddress[1] ^= _currentAddress[i+4];
+		}
 	}
 	
 	//we configur the network for mac filtering
@@ -405,9 +416,7 @@ void DW1000RangingClass::loop() {
 				//if the last device we send the POLL is broadcast:
 				if(_lastSentToShortAddress[0] == 0xFF && _lastSentToShortAddress[1] == 0xFF) {
 					//we save the value for all the devices !
-					for(uint16_t i = 0; i < _networkDevicesNumber; i++) {
-						_networkDevices[i].timePollSent = timePollSent;
-					}
+					updatePollSendTimes();
 				}
 				else {
 					//we search the device associated with the last send address
@@ -835,6 +844,8 @@ void DW1000RangingClass::transmitPoll(DW1000Device* myDistantDevice) {
 	}
 	
 	transmit(data);
+
+	pollSendTimesUpdated = false;
 }
 
 
@@ -849,6 +860,10 @@ void DW1000RangingClass::transmitPollAck(DW1000Device* myDistantDevice) {
 }
 
 void DW1000RangingClass::transmitRange(DW1000Device* myDistantDevice) {
+	if( pollSendTimesUpdated == false ) {
+		updatePollSendTimes();
+		}
+
 	//transmit range need to accept broadcast for multiple anchor
 	transmitInit();
 	
@@ -899,6 +914,16 @@ void DW1000RangingClass::transmitRange(DW1000Device* myDistantDevice) {
 	
 	transmit(data);
 }
+
+void DW1000RangingClass::updatePollSendTimes() {
+	DW1000Time timePollSent;
+	DW1000.getTransmitTimestamp(timePollSent);
+	//if the last device we send the POLL is broadcast:
+	for(uint16_t i = 0; i < _networkDevicesNumber; i++) {
+		_networkDevices[i].timePollSent = timePollSent;
+		}
+	pollSendTimesUpdated = true;
+	}
 
 
 void DW1000RangingClass::transmitRangeReport(DW1000Device* myDistantDevice) {
