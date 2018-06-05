@@ -86,6 +86,8 @@ public:
 	DW1000Time timeRangeSent;
 	DW1000Time timeRangeReceived;
 	
+	boolean pollAckRXTimeUpdated;
+	
 	void    noteActivity();
 	boolean isInactive();
 

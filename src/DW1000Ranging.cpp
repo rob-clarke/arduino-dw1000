@@ -643,6 +643,7 @@ void DW1000RangingClass::loop() {
 				}
 				if(messageType == POLL_ACK) {
 					DW1000.getReceiveTimestamp(myDistantDevice->timePollAckReceived);
+					myDistantDevice->pollAckRXTimeUpdated = true;
 					//we note activity for our device:
 					myDistantDevice->noteActivity();
 					
@@ -824,6 +825,9 @@ void DW1000RangingClass::transmitPoll(DW1000Device* myDistantDevice) {
 			uint16_t replyTime = _networkDevices[i].getReplyTime();
 			memcpy(data+SHORT_MAC_LEN+2+2+4*i, &replyTime, 2);
 			
+			// Reset the pollAckRXTime update state for each network device we send a POLL to
+			_networkDevices[i].pollAckRXTimeUpdated = false;
+			
 		}
 		
 		copyShortAddress(_lastSentToShortAddress, shortBroadcast);
@@ -882,18 +886,29 @@ void DW1000RangingClass::transmitRange(DW1000Device* myDistantDevice) {
 		DW1000Time deltaTime     = DW1000Time(DEFAULT_REPLY_DELAY_TIME, DW1000Time::MICROSECONDS);
 		DW1000Time timeRangeSent = DW1000.setDelay(deltaTime);
 		
+		uint8_t numResolvedDevices = 0;
 		for(uint8_t i = 0; i < _networkDevicesNumber; i++) {
 			//we write the short address of our device:
-			memcpy(data+SHORT_MAC_LEN+2+17*i, _networkDevices[i].getByteShortAddress(), 2);
+			memcpy(data+SHORT_MAC_LEN+2+17*numResolvedDevices, _networkDevices[i].getByteShortAddress(), 2);
 			
-			
-			//we get the device which correspond to the message which was sent (need to be filtered by MAC address)
-			_networkDevices[i].timeRangeSent = timeRangeSent;
-			_networkDevices[i].timePollSent.getTimestamp(data+SHORT_MAC_LEN+4+17*i);
-			_networkDevices[i].timePollAckReceived.getTimestamp(data+SHORT_MAC_LEN+9+17*i);
-			_networkDevices[i].timeRangeSent.getTimestamp(data+SHORT_MAC_LEN+14+17*i);
+			if( _networkDevices[i].pollAckRXTimeUpdated ) {
+				//we get the device which correspond to the message which was sent (need to be filtered by MAC address)
+				_networkDevices[i].timeRangeSent = timeRangeSent;
+				_networkDevices[i].timePollSent.getTimestamp(data+SHORT_MAC_LEN+4+17*numResolvedDevices);
+				_networkDevices[i].timePollAckReceived.getTimestamp(data+SHORT_MAC_LEN+9+17*numResolvedDevices);
+				_networkDevices[i].timeRangeSent.getTimestamp(data+SHORT_MAC_LEN+14+17*numResolvedDevices);
+				numResolvedDevices++;
+			}
+			else {
+				char msg[32];
+				byte* address = _networkDevices[i].getByteShortAddress();
+				sprintf(msg,"[%02x%02x] No PollAck Update",address[1],address[0]);
+				Serial2.println(msg);
+			}
 			
 		}
+		
+		data[SHORT_MAC_LEN+1] = numResolvedDevices;
 		
 		copyShortAddress(_lastSentToShortAddress, shortBroadcast);
 		
