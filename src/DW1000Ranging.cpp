@@ -578,6 +578,10 @@ void DW1000RangingClass::loop() {
 						memcpy(shortAddress, data+SHORT_MAC_LEN+2+i*17, 2);
 						
 						//we test if the short address is our address
+						// Even if our address is missing in the RANGE packet:
+						//  Can still do one way ranging using time timePollAckSent and timeRangeReceived
+						//  as both are ANCHOR measured. Can work out what the delay should be if number
+						//  of devices that TAG was anticipating is known... Should refactor for structs to define packets...
 						if(shortAddress[0] == _currentShortAddress[0] && shortAddress[1] == _currentShortAddress[1]) {
 							//we grab the replytime wich is for us
 							DW1000.getReceiveTimestamp(myDistantDevice->timeRangeReceived);
@@ -644,6 +648,11 @@ void DW1000RangingClass::loop() {
 				if(messageType == POLL_ACK) {
 					DW1000.getReceiveTimestamp(myDistantDevice->timePollAckReceived);
 					myDistantDevice->pollAckRXTimeUpdated = true;
+					/*
+					char msg[32];
+					sprintf(msg,"Set PollAck rx for %02x%02x",address[1],address[0]);
+					Serial2.println(msg);
+					*/
 					//we note activity for our device:
 					myDistantDevice->noteActivity();
 					
@@ -651,6 +660,7 @@ void DW1000RangingClass::loop() {
 					if(myDistantDevice->getIndex() == _networkDevicesNumber-1) {
 						_expectedMsgId = RANGE_REPORT;
 						//and transmit the next message (range) of the ranging protocole (in broadcast)
+						// Should keep track of which timePollAckReceived's have been updated.
 						transmitRange(nullptr);
 					}
 				}
@@ -1025,6 +1035,3 @@ float DW1000RangingClass::filterValue(float value, float previousValue, uint16_t
 	float k = 2.0f / ((float)numberOfElements + 1.0f);
 	return (value * k) + previousValue * (1.0f - k);
 }
-
-
-
